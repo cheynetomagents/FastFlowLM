@@ -21,11 +21,38 @@ jobs:
             distro: "fedora"
 
     container:
-      image: ghcr.io/fastflowlm/fastflowlm/build-environment-rpm:${{ matrix.distro }}${{ matrix.version }}
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+      image: ${{ matrix.distro }}:${{ matrix.version }}
     steps:
+      - name: Install build dependencies
+        run: |
+          dnf install -y \
+            boost-devel \
+            cmake \
+            fftw-devel \
+            gcc-c++ \
+            git \
+            libcurl-devel \
+            libdrm-devel \
+            libuuid-devel \
+            ninja-build \
+            patchelf \
+            pkg-config \
+            readline-devel \
+            rpm-build \
+            rpmdevtools \
+            ffmpeg-free-devel \
+            libavcodec-free-devel \
+            libavformat-free-devel \
+            libavutil-free-devel \
+            libswresample-free-devel \
+            libswscale-free-devel
+
+      - name: Install Rust toolchain
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
+            sh -s -- -y --profile minimal --default-toolchain stable
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -47,13 +74,6 @@ jobs:
       - name: Get short SHA
         id: short_sha
         run: echo "sha=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
-
-      - name: Upgrade Rust toolchain
-        run: |
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
-            sh -s -- -y --profile minimal --default-toolchain stable
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-          rustc --version
 
       - name: Build RPM package
         env:
@@ -92,7 +112,6 @@ jobs:
         run: |
           RPM_FILE=$(find rpmbuild/RPMS -name '*.rpm' -type f | head -1)
           RPM_NAME=$(basename "$RPM_FILE")
-          # Rename to include distro info
           FINAL_NAME="fastflowlm-${RPM_VERSION}.${{ matrix.distro }}${{ matrix.version }}.x86_64.rpm"
           cp "$RPM_FILE" "./${FINAL_NAME}"
           echo "rpm_file=${FINAL_NAME}" >> $GITHUB_OUTPUT
