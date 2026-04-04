@@ -1,3 +1,6 @@
+This is my fork of fastflowlm. No major changes, just rpm packaging.
+
+
 <p align="center">
   <a href="https://www.fastflowlm.com" target="_blank">
     <img src="assets/logo.png" alt="FastFlowLM Logo" width="200"/>
