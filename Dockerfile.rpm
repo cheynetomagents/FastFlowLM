@@ -15,8 +15,8 @@ RUN if [ -n "$XRT_REPO_URL" ]; then \
 # Install all build dependencies
 RUN dnf install -y \
     boost-devel \
-    cargo \
     cmake \
+    curl \
     fftw-devel \
     gcc-c++ \
     git \
@@ -29,8 +29,12 @@ RUN dnf install -y \
     readline-devel \
     rpm-build \
     rpmdevtools \
-    rust \
     && dnf clean all
+
+# Install Rust via rustup (Fedora's packaged rust/cargo can be too old)
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
+    sh -s -- -y --profile minimal --default-toolchain stable
+ENV PATH="/root/.cargo/bin:${PATH}"
 
 # Install ffmpeg development libraries
 # On Fedora these come from rpmfusion or fedora repos

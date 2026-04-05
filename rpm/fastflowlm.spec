@@ -16,8 +16,6 @@ BuildRequires:  cmake >= 3.22
 BuildRequires:  ninja-build
 BuildRequires:  gcc-c++
 BuildRequires:  git
-BuildRequires:  cargo
-BuildRequires:  rust
 BuildRequires:  pkgconfig
 BuildRequires:  boost-devel
 BuildRequires:  boost-program-options
@@ -71,5 +69,5 @@ rm -rf %{buildroot}/usr/local/bin
 %{_bindir}/flm
 
 %changelog
-* Thu Apr 03 2026 FastFlowLM <noreply@example.com> - 0.9.38-1
+* Fri Apr 03 2026 FastFlowLM <noreply@example.com> - 0.9.38-1
 - Initial RPM package
