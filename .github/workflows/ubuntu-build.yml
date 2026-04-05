@@ -103,6 +103,7 @@ jobs:
           rpmbuild \
             --define "_topdir $(pwd)/rpmbuild" \
             --define "flm_version ${RPM_VERSION}" \
+            --nodeps \
             -bb rpmbuild/SPECS/fastflowlm.spec
 
       - name: Collect RPM

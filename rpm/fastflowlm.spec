@@ -18,15 +18,11 @@ BuildRequires:  gcc-c++
 BuildRequires:  git
 BuildRequires:  pkgconfig
 BuildRequires:  boost-devel
-BuildRequires:  boost-program-options
 BuildRequires:  libcurl-devel
 BuildRequires:  fftw-devel
 BuildRequires:  readline-devel
 BuildRequires:  libuuid-devel
 BuildRequires:  libdrm-devel
-BuildRequires:  ffmpeg-free-devel
-
-Requires:       xrt
 
 %description
 FastFlowLM is an NPU-first runtime for running Large Language Models
