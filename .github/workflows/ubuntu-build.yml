@@ -124,95 +124,96 @@ jobs:
           path: ./${{ steps.collect_rpm.outputs.rpm_file }}
           if-no-files-found: error
 
-  package-deb:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - version: "24.04"
-            codename: "noble"
-            distro: "ubuntu"
-          - version: "25.10"
-            codename: "questing"
-            distro: "ubuntu"
-          - version: "26.04"
-            codename: "resolute"
-            distro: "ubuntu"
-          - version: "13"
-            codename: "trixie"
-            distro: "debian"
-
-    container:
-      image: ghcr.io/fastflowlm/fastflowlm/build-environment:${{ matrix.distro }}${{ matrix.version }}
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          fetch-depth: 0
-          fetch-tags: true
-
-      - name: Configure git safe directory
-        run: git config --global --add safe.directory $(pwd)
-
-      - name: Get version from git describe
-        id: get_version
-        run: |
-          VERSION=$(git describe --tags --always)
-          # Strip leading 'v' for Debian version compatibility
-          DEB_VERSION=$(echo "${VERSION}" | sed 's/^v//')
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "deb_version=${DEB_VERSION}" >> $GITHUB_OUTPUT
-
-      - name: Get short SHA
-        id: short_sha
-        run: echo "sha=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
-
-      - name: Create Debian packaging metadata
-        working-directory: ${{ github.workspace }}
-        run: |
-          sed -e "s|@@DEB_VERSION@@|${{ steps.get_version.outputs.deb_version }}|g" \
-              -e "s|@@DEB_CODENAME@@|${{ matrix.codename }}|g" \
-              -e "s|@@DEB_DATE@@|$(date -R)|g" \
-              debian/changelog.in > debian/changelog
-
-          chmod +x debian/rules
-
-      - name: Upgrade Rust toolchain
-        run: |
-          apt-get update
-          apt-get install -y --no-install-recommends curl ca-certificates
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
-            sh -s -- -y --profile minimal --default-toolchain stable
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-          rustc --version
-
-      - name: Build Debian package
-        working-directory: ${{ github.workspace }}
-        env:
-          DEBEMAIL: noreply@example.com
-          DEBFULLNAME: fastflowlm
-          DEB_VERSION: ${{ steps.get_version.outputs.deb_version }}
-        run: |
-          dpkg-buildpackage -b -us -uc
-          mv ../fastflowlm_${DEB_VERSION}_amd64.deb ./fastflowlm_${DEB_VERSION}_${{ matrix.distro }}${{ matrix.version }}_amd64.deb
-          ls -lah ./fastflowlm_${DEB_VERSION}_${{ matrix.distro }}${{ matrix.version }}_amd64.deb
-
-      - name: Upload Debian package artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: flm-${{ matrix.distro }}${{ matrix.version }}-${{ steps.short_sha.outputs.sha }}-deb
-          path: ./fastflowlm_${{ steps.get_version.outputs.deb_version }}_${{ matrix.distro }}${{ matrix.version }}_amd64.deb
-          if-no-files-found: error
+  # NOTE: package-deb is disabled because it requires pulling a private
+  # container image from the upstream ghcr.io/fastflowlm registry.
+  # Deb packages can be obtained from the upstream project if needed.
+  # package-deb:
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     matrix:
+  #       include:
+  #         - version: "24.04"
+  #           codename: "noble"
+  #           distro: "ubuntu"
+  #         - version: "25.10"
+  #           codename: "questing"
+  #           distro: "ubuntu"
+  #         - version: "26.04"
+  #           codename: "resolute"
+  #           distro: "ubuntu"
+  #         - version: "13"
+  #           codename: "trixie"
+  #           distro: "debian"
+  #
+  #   container:
+  #     image: ghcr.io/fastflowlm/fastflowlm/build-environment:${{ matrix.distro }}${{ matrix.version }}
+  #     credentials:
+  #       username: ${{ github.actor }}
+  #       password: ${{ secrets.GITHUB_TOKEN }}
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+  #       with:
+  #         submodules: recursive
+  #         fetch-depth: 0
+  #         fetch-tags: true
+  #
+  #     - name: Configure git safe directory
+  #       run: git config --global --add safe.directory $(pwd)
+  #
+  #     - name: Get version from git describe
+  #       id: get_version
+  #       run: |
+  #         VERSION=$(git describe --tags --always)
+  #         DEB_VERSION=$(echo "${VERSION}" | sed 's/^v//')
+  #         echo "version=${VERSION}" >> $GITHUB_OUTPUT
+  #         echo "deb_version=${DEB_VERSION}" >> $GITHUB_OUTPUT
+  #
+  #     - name: Get short SHA
+  #       id: short_sha
+  #       run: echo "sha=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+  #
+  #     - name: Create Debian packaging metadata
+  #       working-directory: ${{ github.workspace }}
+  #       run: |
+  #         sed -e "s|@@DEB_VERSION@@|${{ steps.get_version.outputs.deb_version }}|g" \
+  #             -e "s|@@DEB_CODENAME@@|${{ matrix.codename }}|g" \
+  #             -e "s|@@DEB_DATE@@|$(date -R)|g" \
+  #             debian/changelog.in > debian/changelog
+  #         chmod +x debian/rules
+  #
+  #     - name: Upgrade Rust toolchain
+  #       run: |
+  #         apt-get update
+  #         apt-get install -y --no-install-recommends curl ca-certificates
+  #         curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
+  #           sh -s -- -y --profile minimal --default-toolchain stable
+  #         echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+  #         rustc --version
+  #
+  #     - name: Build Debian package
+  #       working-directory: ${{ github.workspace }}
+  #       env:
+  #         DEBEMAIL: noreply@example.com
+  #         DEBFULLNAME: fastflowlm
+  #         DEB_VERSION: ${{ steps.get_version.outputs.deb_version }}
+  #       run: |
+  #         dpkg-buildpackage -b -us -uc
+  #         mv ../fastflowlm_${DEB_VERSION}_amd64.deb ./fastflowlm_${DEB_VERSION}_${{ matrix.distro }}${{ matrix.version }}_amd64.deb
+  #         ls -lah ./fastflowlm_${DEB_VERSION}_${{ matrix.distro }}${{ matrix.version }}_amd64.deb
+  #
+  #     - name: Upload Debian package artifact
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: flm-${{ matrix.distro }}${{ matrix.version }}-${{ steps.short_sha.outputs.sha }}-deb
+  #         path: ./fastflowlm_${{ steps.get_version.outputs.deb_version }}_${{ matrix.distro }}${{ matrix.version }}_amd64.deb
+  #         if-no-files-found: error
 
   release:
     permissions:
       contents: write
     runs-on: ubuntu-latest
-    needs: [package-deb, package-rpm]
+    needs: [package-rpm]
     if: github.ref_type == 'tag'
     steps:
       - name: Checkout code
@@ -226,25 +227,11 @@ jobs:
           VERSION=$(git describe --tags --always)
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
 
-      - name: Download all deb artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: debs
-          pattern: '*-deb'
-
       - name: Download all rpm artifacts
         uses: actions/download-artifact@v4
         with:
           path: rpms
           pattern: '*-rpm'
-
-      - name: Upload Deb packages to Release
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ github.ref }}
-          file_glob: true
-          file: debs/*/*.deb
 
       - name: Upload RPM packages to Release
         uses: svenstaro/upload-release-action@v2
