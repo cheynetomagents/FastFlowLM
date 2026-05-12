@@ -66,6 +66,7 @@ jobs:
             rpmdevtools \
             rust \
             systemd-devel \
+            systemtap-sdt-devel \
             zlib-static \
             && dnf clean all
 
