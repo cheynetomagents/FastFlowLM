@@ -55,7 +55,7 @@ jobs:
           ln -sf /usr/bin/cmake /usr/local/bin/cmake3
           git clone --depth=1 --recursive https://github.com/amd/xdna-driver.git /tmp/xdna-driver
           cd /tmp/xdna-driver/xrt/build
-          ./build.sh -npu -opt -noctest -j$(nproc)
+          ./build.sh -opt -noctest -j$(nproc)
           cd /tmp/xdna-driver/xrt/build/Release
           make package -j$(nproc)
           dnf install -y /tmp/xdna-driver/xrt/build/Release/xrt_*-base.rpm \
