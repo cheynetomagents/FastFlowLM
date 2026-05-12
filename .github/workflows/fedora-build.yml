@@ -137,7 +137,7 @@ jobs:
           FLM_SRCDIR: ${{ github.workspace }}
         run: |
           export PATH="$HOME/.cargo/bin:$PATH"
-          rpmbuild -ba \
+          rpmbuild -ba --nodeps \
             --define "_flm_srcdir ${FLM_SRCDIR}" \
             --define "_xrt_include_dir /opt/xilinx/xrt/include" \
             --define "_xrt_lib_dir /opt/xilinx/xrt/lib" \
