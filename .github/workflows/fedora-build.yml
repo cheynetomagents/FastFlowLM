@@ -50,23 +50,18 @@ jobs:
             kernel-headers \
             && dnf clean all
 
-      - name: Install XRT headers and libraries
+      - name: Install XRT from source
         run: |
-          # Install XRT runtime from COPR (provides libxrt_coreutil under /usr/xrt)
-          dnf install -y 'dnf-command(copr)'
-          dnf copr enable -y xanderlent/amd-npu-driver
-          dnf install -y xrt
-          # Clone XRT for headers (COPR package lacks -devel)
+          ln -sf /usr/bin/cmake /usr/local/bin/cmake3
           git clone --depth=1 https://github.com/Xilinx/XRT.git /tmp/xrt-src
-          # Install headers to expected path
-          mkdir -p /opt/xilinx/xrt/include
-          cp -r /tmp/xrt-src/src/runtime_src/core/include/. /opt/xilinx/xrt/include/
+          cd /tmp/xrt-src/build
+          ./build.sh -opt -noctest -noert -j$(nproc)
+          cd /tmp/xrt-src/build/Release
+          make package -j$(nproc)
+          dnf install -y /tmp/xrt-src/build/Release/xrt_*-base.rpm \
+                         /tmp/xrt-src/build/Release/xrt_*-base-devel.rpm || \
+          dnf install -y /tmp/xrt-src/build/Release/xrt_*.rpm
           rm -rf /tmp/xrt-src
-          # Symlink libs from COPR install path to expected path
-          mkdir -p /opt/xilinx/xrt/lib
-          ln -sf /usr/xrt/lib64/libxrt_coreutil.so* /opt/xilinx/xrt/lib/ 2>/dev/null || \
-          ln -sf /usr/xrt/lib/libxrt_coreutil.so* /opt/xilinx/xrt/lib/ 2>/dev/null || true
-          # Verify
           ls /opt/xilinx/xrt/include/xrt/xrt_device.h
           ls /opt/xilinx/xrt/lib/
 
