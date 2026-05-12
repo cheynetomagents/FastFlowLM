@@ -15,18 +15,27 @@ jobs:
             ubuntu_ppa: "ppa:lemonade-team/stable"
             distro: "ubuntu"
             backports: ""
+            dockerfile: "Dockerfile"
           - release: "25.10"
             ubuntu_ppa: "ppa:lemonade-team/stable"
             distro: "ubuntu"
             backports: ""
+            dockerfile: "Dockerfile"
           - release: "26.04"
             ubuntu_ppa: ""
             distro: "ubuntu"
             backports: ""
+            dockerfile: "Dockerfile"
           - release: "13"
             distro: "debian"
             ubuntu_ppa: ""
             backports: "trixie-backports"
+            dockerfile: "Dockerfile"
+          - release: "44"
+            distro: "fedora"
+            ubuntu_ppa: ""
+            backports: ""
+            dockerfile: "Dockerfile.fedora"
 
     permissions:
       contents: read
@@ -60,7 +69,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./Dockerfile
+          file: ${{ matrix.dockerfile }}
           build-args: |
             BASE_IMAGE=${{ matrix.distro }}:${{ matrix.release }}
             UBUNTU_PPA=${{ matrix.ubuntu_ppa }}

@@ -1,0 +1,178 @@
+name: Build RPM Package
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - '*'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  package-rpm:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - version: "44"
+            distro: "fedora"
+
+    container:
+      image: fedora:44
+
+    steps:
+      - name: Install build dependencies
+        run: |
+          dnf install -y \
+            boost-devel \
+            boost-filesystem \
+            boost-program-options \
+            boost-static \
+            cargo \
+            cmake \
+            elfutils-devel \
+            elfutils-libs \
+            ffmpeg-free-devel \
+            fftw-devel \
+            gcc-c++ \
+            git \
+            glibc-static \
+            libcurl-devel \
+            libdrm-devel \
+            libstdc++-static \
+            libudev-devel \
+            libuuid-devel \
+            libyaml-devel \
+            make \
+            nasm \
+            ninja-build \
+            ocl-icd \
+            ocl-icd-devel \
+            opencl-headers \
+            openssl-devel \
+            patchelf \
+            pkgconf-pkg-config \
+            protobuf-compiler \
+            protobuf-devel \
+            python3-devel \
+            python3-pybind11 \
+            pybind11-devel \
+            rapidjson-devel \
+            readline-devel \
+            rpm-build \
+            rpmdevtools \
+            rust \
+            systemd-devel \
+            systemtap-sdt-devel \
+            zlib-static \
+            && dnf clean all
+
+      - name: Install XRT from source
+        run: |
+          git clone --depth=1 --recurse-submodules --shallow-submodules https://github.com/Xilinx/XRT.git /tmp/xrt-src
+          mkdir -p /tmp/xrt-src/build/Release
+          cd /tmp/xrt-src/build/Release
+          cmake -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_INSTALL_PREFIX=/opt/xilinx/xrt \
+                -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+                -DXRT_ENABLE_WERROR=OFF \
+                ../../src
+          make -j$(nproc) DESTDIR=$PWD install
+          make package
+          dnf install -y /tmp/xrt-src/build/Release/xrt_*-base.rpm \
+                         /tmp/xrt-src/build/Release/xrt_*-base-devel.rpm || \
+          dnf install -y /tmp/xrt-src/build/Release/xrt_*.rpm
+          rm -rf /tmp/xrt-src
+          ls /opt/xilinx/xrt/include/xrt/xrt_device.h
+          ls /opt/xilinx/xrt/lib/
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Configure git safe directory
+        run: git config --global --add safe.directory $(pwd)
+
+      - name: Get version from git describe
+        id: get_version
+        run: |
+          VERSION=$(git describe --tags --always)
+          RPM_VERSION=$(echo "${VERSION}" | sed 's/^v//' | sed 's/-/_/g')
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "rpm_version=${RPM_VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Get short SHA
+        id: short_sha
+        env:
+          COMMIT_SHA: ${{ github.sha }}
+        run: echo "sha=$(echo "$COMMIT_SHA" | cut -c1-7)" >> $GITHUB_OUTPUT
+
+      - name: Upgrade Rust toolchain
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
+            sh -s -- -y --profile minimal --default-toolchain stable
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          rustc --version
+
+      - name: Create RPM packaging metadata
+        run: |
+          RPM_VER="${{ steps.get_version.outputs.rpm_version }}"
+          sed -e "s|@@RPM_VERSION@@|${RPM_VER}|g" \
+              -e "s|@@RPM_RELEASE@@|1|g" \
+              -e "s|@@NPU_VERSION@@|32.0.203.304|g" \
+              -e "s|@@RPM_DATE@@|$(LC_ALL=C date '+%a %b %d %Y')|g" \
+              rpm/fastflowlm.spec.in > /tmp/fastflowlm.spec
+
+      - name: Set up RPM build tree
+        run: rpmdev-setuptree
+
+      - name: Build RPM package
+        env:
+          FLM_SRCDIR: ${{ github.workspace }}
+        run: |
+          export PATH="$HOME/.cargo/bin:$PATH"
+          rpmbuild -ba --nodeps \
+            --define "_flm_srcdir ${FLM_SRCDIR}" \
+            --define "_xrt_include_dir /opt/xilinx/xrt/include" \
+            --define "_xrt_lib_dir /opt/xilinx/xrt/lib" \
+            /tmp/fastflowlm.spec
+          ls -lah ~/rpmbuild/RPMS/x86_64/fastflowlm-*.rpm
+
+      - name: Upload RPM package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: flm-${{ matrix.distro }}${{ matrix.version }}-${{ steps.short_sha.outputs.sha }}-rpm
+          path: ~/rpmbuild/RPMS/x86_64/fastflowlm-*.rpm
+          if-no-files-found: error
+
+  release:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    needs: package-rpm
+    if: github.ref_type == 'tag'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download all RPM artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: rpms
+          pattern: '*-rpm'
+
+      - name: Upload RPM to Release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.ref }}
+          file_glob: true
+          file: rpms/*/*.rpm

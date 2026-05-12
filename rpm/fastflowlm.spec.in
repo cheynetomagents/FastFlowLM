@@ -1,0 +1,75 @@
+Name:           fastflowlm
+Version:        @@RPM_VERSION@@
+Release:        @@RPM_RELEASE@@%{?dist}
+Summary:        FastFlowLM runtime and CLI for AMD Ryzen AI NPUs
+License:        See LICENSE_BINARY.txt and LICENSE_RUNTIME.txt
+URL:            https://www.fastflowlm.com
+ExclusiveArch:  x86_64
+
+BuildRequires:  cmake >= 3.22
+BuildRequires:  ninja-build
+BuildRequires:  cargo
+BuildRequires:  rustc
+BuildRequires:  git
+BuildRequires:  pkg-config
+BuildRequires:  boost-devel
+BuildRequires:  libcurl-devel
+BuildRequires:  fftw-devel
+BuildRequires:  libdrm-devel
+BuildRequires:  ffmpeg-free-devel
+BuildRequires:  readline-devel
+BuildRequires:  libuuid-devel
+# xrt-devel: install from AMD XRT repo before building
+# https://github.com/Xilinx/XRT — no Fedora package available
+BuildRequires:  xrt-devel
+
+Requires:       xrt-npu2
+
+# objcopy and dwz corrupt the flm binary — skip all post-processing
+%global __os_install_post %(echo '%{__os_install_post}' | sed -e 's!/usr/lib[^[:space:]]*/brp-strip[[:space:]].*$!!g' -e 's!/usr/lib[^[:space:]]*/brp-strip-static-archive[[:space:]].*$!!g')
+%global __strip /bin/true
+%define __brp_strip_nondebug_whitelist %{nil}
+%define __brp_strip_debug_whitelist %{nil}
+%global __brp_dwz %{nil}
+
+%description
+FastFlowLM (FLM) runs large language models on AMD Ryzen AI NPUs.
+Supports LLMs, VLMs, audio, and embedding models. Provides an
+Ollama-compatible CLI and OpenAI-compatible REST API on port 52525.
+
+# Pass source tree location via: rpmbuild --define "_flm_srcdir /path/to/FastFlowLM"
+%{!?_flm_srcdir: %define _flm_srcdir %(pwd)}
+# XRT paths — override if XRT is not installed at /opt/xilinx/xrt
+%{!?_xrt_include_dir: %define _xrt_include_dir /opt/xilinx/xrt/include}
+%{!?_xrt_lib_dir: %define _xrt_lib_dir /opt/xilinx/xrt/lib}
+
+%prep
+# Source tree is used directly — no tarball unpacking needed.
+mkdir -p %{_builddir}/%{name}-%{version}-build
+
+%build
+export PATH=/usr/bin:/usr/local/bin:$HOME/.cargo/bin:$PATH
+cmake -S %{_flm_srcdir}/src -B %{_builddir}/build --preset linux-default \
+    -DFLM_VERSION=@@RPM_VERSION@@ \
+    -DNPU_VERSION=@@NPU_VERSION@@ \
+    -DXRT_INCLUDE_DIR=%{_xrt_include_dir} \
+    -DXRT_LIB_DIR=%{_xrt_lib_dir}
+cmake --build %{_builddir}/build
+
+%install
+DESTDIR=%{buildroot} cmake --install %{_builddir}/build --prefix=/opt/fastflowlm
+
+# Remove include directories (not needed at runtime)
+rm -rf %{buildroot}/opt/fastflowlm/include
+
+# Create /usr/bin/flm symlink
+install -d %{buildroot}/usr/bin
+ln -sf /opt/fastflowlm/bin/flm %{buildroot}/usr/bin/flm
+
+%files
+/opt/fastflowlm/
+/usr/bin/flm
+
+%changelog
+* @@RPM_DATE@@ FastFlowLM <noreply@example.com> - @@RPM_VERSION@@-@@RPM_RELEASE@@
+- Automated build.

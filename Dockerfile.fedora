@@ -1,0 +1,47 @@
+FROM fedora:44
+
+LABEL org.opencontainers.image.description="FastFlowLM build environment for Fedora 44 with all dependencies pre-installed"
+LABEL org.opencontainers.image.source="https://github.com/FastFlowLM/FastFlowLM"
+
+ARG XRT_BRANCH=master
+
+# Install build tools and all RPM BuildRequires from fastflowlm.spec.in
+RUN dnf install -y \
+    cmake \
+    ninja-build \
+    cargo \
+    rust \
+    git \
+    pkg-config \
+    boost-devel \
+    libcurl-devel \
+    fftw-devel \
+    libdrm-devel \
+    ffmpeg-free-devel \
+    readline-devel \
+    libuuid-devel \
+    rpm-build \
+    rpmdevtools \
+    gcc-c++ \
+    make \
+    patchelf \
+    nasm \
+    kernel-devel \
+    kernel-headers \
+    dkms \
+    && dnf clean all
+
+# Build XRT from source (no Fedora pre-built xrt-devel package available).
+# xdna-driver bundles XRT and produces xrt_*-base-devel.rpm with required headers.
+RUN git clone --depth=1 --recursive https://github.com/amd/xdna-driver.git /tmp/xdna-driver && \
+    cd /tmp/xdna-driver/xrt/build && \
+    ./build.sh -npu -opt -noctest -j$(nproc) && \
+    cd /tmp/xdna-driver/xrt/build/Release && \
+    make package -j$(nproc) && \
+    dnf install -y /tmp/xdna-driver/xrt/build/Release/xrt_*-base.rpm \
+                   /tmp/xdna-driver/xrt/build/Release/xrt_*-base-devel.rpm && \
+    rm -rf /tmp/xdna-driver
+
+WORKDIR /workspace
+
+CMD ["/bin/bash"]
