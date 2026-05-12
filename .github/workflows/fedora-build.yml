@@ -71,7 +71,7 @@ jobs:
 
       - name: Install XRT from source
         run: |
-          git clone --depth=1 https://github.com/Xilinx/XRT.git /tmp/xrt-src
+          git clone --depth=1 --recurse-submodules --shallow-submodules https://github.com/Xilinx/XRT.git /tmp/xrt-src
           mkdir -p /tmp/xrt-src/build/Release
           cd /tmp/xrt-src/build/Release
           cmake -DCMAKE_BUILD_TYPE=Release \
