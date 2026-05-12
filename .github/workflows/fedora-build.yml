@@ -21,12 +21,46 @@ jobs:
             distro: "fedora"
 
     container:
-      image: ghcr.io/fastflowlm/fastflowlm/build-environment:${{ matrix.distro }}${{ matrix.version }}
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+      image: fedora:44
 
     steps:
+      - name: Install build dependencies
+        run: |
+          dnf install -y \
+            cmake \
+            ninja-build \
+            cargo \
+            rust \
+            git \
+            pkg-config \
+            boost-devel \
+            libcurl-devel \
+            fftw-devel \
+            libdrm-devel \
+            ffmpeg-free-devel \
+            readline-devel \
+            libuuid-devel \
+            rpm-build \
+            rpmdevtools \
+            gcc-c++ \
+            make \
+            patchelf \
+            nasm \
+            kernel-devel \
+            kernel-headers \
+            && dnf clean all
+
+      - name: Build and install XRT from source
+        run: |
+          git clone --depth=1 --recursive https://github.com/amd/xdna-driver.git /tmp/xdna-driver
+          cd /tmp/xdna-driver/xrt/build
+          ./build.sh -npu -opt -noctest -j$(nproc)
+          cd /tmp/xdna-driver/xrt/build/Release
+          make package -j$(nproc)
+          dnf install -y /tmp/xdna-driver/xrt/build/Release/xrt_*-base.rpm \
+                         /tmp/xdna-driver/xrt/build/Release/xrt_*-base-devel.rpm
+          rm -rf /tmp/xdna-driver
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -74,6 +108,7 @@ jobs:
         env:
           FLM_SRCDIR: ${{ github.workspace }}
         run: |
+          export PATH="$HOME/.cargo/bin:$PATH"
           rpmbuild -ba \
             --define "_flm_srcdir ${FLM_SRCDIR}" \
             --define "_xrt_include_dir /opt/xilinx/xrt/include" \
