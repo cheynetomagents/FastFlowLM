@@ -76,6 +76,7 @@ jobs:
                 -DCMAKE_INSTALL_PREFIX=/opt/xilinx/xrt \
                 -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
                 -DXRT_ENABLE_WERROR=OFF \
+                -DXRT_SKIP_PYBIND=ON \
                 ../../src
           make -j$(nproc) DESTDIR=$PWD install
           make package
