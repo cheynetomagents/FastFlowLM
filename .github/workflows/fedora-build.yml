@@ -52,12 +52,16 @@ jobs:
 
       - name: Install XRT from source
         run: |
-          ln -sf /usr/bin/cmake /usr/local/bin/cmake3
           git clone --depth=1 https://github.com/Xilinx/XRT.git /tmp/xrt-src
-          cd /tmp/xrt-src/build
-          ./build.sh -opt -noctest -noert -j$(nproc)
+          mkdir -p /tmp/xrt-src/build/Release
           cd /tmp/xrt-src/build/Release
-          make package -j$(nproc)
+          cmake -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_INSTALL_PREFIX=/opt/xilinx/xrt \
+                -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+                -DXRT_ENABLE_WERROR=OFF \
+                ../../src
+          make -j$(nproc) DESTDIR=$PWD install
+          make package
           dnf install -y /tmp/xrt-src/build/Release/xrt_*-base.rpm \
                          /tmp/xrt-src/build/Release/xrt_*-base-devel.rpm || \
           dnf install -y /tmp/xrt-src/build/Release/xrt_*.rpm
