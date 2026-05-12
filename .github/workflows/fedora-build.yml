@@ -52,6 +52,7 @@ jobs:
 
       - name: Build and install XRT from source
         run: |
+          ln -sf /usr/bin/cmake /usr/local/bin/cmake3
           git clone --depth=1 --recursive https://github.com/amd/xdna-driver.git /tmp/xdna-driver
           cd /tmp/xdna-driver/xrt/build
           ./build.sh -npu -opt -noctest -j$(nproc)
