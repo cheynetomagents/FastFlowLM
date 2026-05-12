@@ -27,29 +27,44 @@ jobs:
       - name: Install build dependencies
         run: |
           dnf install -y \
-            cmake \
-            ninja-build \
-            cargo \
-            rust \
-            git \
-            pkg-config \
             boost-devel \
-            libcurl-devel \
-            fftw-devel \
-            libdrm-devel \
+            boost-filesystem \
+            boost-program-options \
+            boost-static \
+            cargo \
+            cmake \
+            elfutils-devel \
+            elfutils-libs \
             ffmpeg-free-devel \
-            readline-devel \
-            libuuid-devel \
-            rpm-build \
-            rpmdevtools \
+            fftw-devel \
             gcc-c++ \
+            git \
+            glibc-static \
+            libcurl-devel \
+            libdrm-devel \
+            libstdc++-static \
+            libudev-devel \
+            libuuid-devel \
+            libyaml-devel \
             make \
-            patchelf \
             nasm \
-            kernel-devel \
-            kernel-headers \
+            ninja-build \
+            ocl-icd \
             ocl-icd-devel \
             opencl-headers \
+            openssl-devel \
+            patchelf \
+            pkgconf-pkg-config \
+            protobuf-compiler \
+            protobuf-devel \
+            python3-devel \
+            rapidjson-devel \
+            readline-devel \
+            rpm-build \
+            rpmdevtools \
+            rust \
+            systemd-devel \
+            zlib-static \
             && dnf clean all
 
       - name: Install XRT from source
