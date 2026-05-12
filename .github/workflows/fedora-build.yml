@@ -48,6 +48,8 @@ jobs:
             nasm \
             kernel-devel \
             kernel-headers \
+            ocl-icd-devel \
+            opencl-headers \
             && dnf clean all
 
       - name: Install XRT from source
